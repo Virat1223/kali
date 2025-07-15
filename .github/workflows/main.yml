@@ -1,0 +1,40 @@
+name: Kali Desktop in GitHub
+
+on:
+  workflow_dispatch:
+
+jobs:
+  kali-vnc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+    - name: Set up Kali repo & update
+      run: |
+        sudo apt update
+        sudo apt install -y curl gnupg lsb-release
+        echo "deb http://http.kali.org/kali kali-rolling main contrib non-free" | sudo tee /etc/apt/sources.list.d/kali.list
+        curl -fsSL https://archive.kali.org/archive-key.asc | sudo apt-key add -
+        sudo apt update
+        sudo apt install -y kali-linux-core xfce4 xfce4-goodies tightvncserver dbus-x11
+
+    - name: Set up VNC server
+      run: |
+        mkdir -p ~/.vnc
+        echo "123456" | vncpasswd -f > ~/.vnc/passwd
+        chmod 600 ~/.vnc/passwd
+        echo "#!/bin/bash" > ~/.vnc/xstartup
+        echo "startxfce4 &" >> ~/.vnc/xstartup
+        chmod +x ~/.vnc/xstartup
+        vncserver :1
+
+    - name: Install ngrok & expose VNC
+      run: |
+        wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
+        unzip ngrok-stable-linux-amd64.zip
+        chmod +x ngrok
+        ./ngrok authtoken YOUR_NGROK_TOKEN
+        ./ngrok tcp 5901 &
+        sleep 10
+        curl -s localhost:4040/api/tunnels | grep -o 'tcp://[0-9a-zA-Z\.:]*'
+
