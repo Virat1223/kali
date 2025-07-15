@@ -14,10 +14,10 @@ jobs:
           docker pull kalilinux/kali-rolling
           docker run -dit --name kali --privileged kalilinux/kali-rolling bash
 
-      - name: Install GUI, VNC, and Tools
+      - name: Install GUI, VNC, and unzip in Kali
         run: |
           docker exec kali apt update
-          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver dbus-x11 curl unzip
+          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver dbus-x11 unzip curl
 
       - name: Configure VNC Server
         run: |
@@ -30,7 +30,6 @@ jobs:
 
       - name: Download & Start LocalXpose Tunnel (TCP 5901)
         run: |
-          apt install -y unzip
           curl -L https://github.com/localxpose/localxpose/releases/latest/download/localxpose-linux-amd64.zip -o lx.zip
           unzip lx.zip
           chmod +x localxpose
