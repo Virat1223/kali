@@ -1,4 +1,4 @@
-name: Kali Linux Desktop over VNC (Docker + Ngrok v3)
+name: Kali Linux Desktop over VNC (Ngrok v3 Safe Download)
 
 on:
   workflow_dispatch:
@@ -28,10 +28,10 @@ jobs:
           docker exec -e USER=root kali bash -c 'echo "#!/bin/bash" > ~/.vnc/xstartup && echo "startxfce4 &" >> ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup'
           docker exec -e USER=root kali vncserver :1
 
-      - name: Download and Start Ngrok v3
+      - name: Download and Start Ngrok (GitHub Mirror)
         run: |
-          wget https://bin.ngrok.com/linux/ngrok-stable.tgz
-          tar -xvzf ngrok-stable.tgz
+          curl -Lo ngrok.zip https://github.com/ngrok/ngrok/releases/latest/download/ngrok-stable-linux-amd64.zip
+          unzip ngrok.zip
           chmod +x ngrok
           ./ngrok config add-authtoken 2stzlWkZievCRtP4Wwp9PhP3J5F_6TnB7h37UqrikBqS3HWqv
           ./ngrok tcp 5901 > ngrok.log &
