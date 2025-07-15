@@ -36,7 +36,8 @@ jobs:
           ./ngrok authtoken 2stzlWkZievCRtP4Wwp9PhP3J5F_6TnB7h37UqrikBqS3HWqv
           ./ngrok tcp 5901 &
           sleep 10
-          echo "::set-output name=VNC_LINK::$(curl -s localhost:4040/api/tunnels | grep -o 'tcp://[0-9a-zA-Z\.:]*')"
 
-      - name: Show VNC Access Info
-        run: echo "🔗 VNC connection link: ${{ steps.ngrok.outputs.VNC_LINK }}"
+      - name: Show VNC Tunnel Link
+        run: |
+          echo "🔗 VNC Tunnel (connect this in VNC Viewer):"
+          curl -s localhost:4040/api/tunnels | grep -o 'tcp://[0-9a-zA-Z\.:]*'
