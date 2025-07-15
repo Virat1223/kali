@@ -1,35 +1,39 @@
-name: Parrot Desktop with VNC and Ngrok v3
+name: Kali Linux Desktop over VNC (Serveo Tunnel)
 
 on:
   workflow_dispatch:
 
 jobs:
-  parrot:
+  kali:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
-      - name: Start Parrot OS Container
+      - name: Pull Kali Docker Image
         run: |
-          docker pull parrotsec/core:latest
-          docker run -dit --name parrot --privileged -p 5901:5901 parrotsec/core:latest bash
+          docker pull kalilinux/kali-rolling
 
-      - name: Install XFCE + VNC in Parrot
+      - name: Start Kali Container
         run: |
-          docker exec parrot apt update
-          docker exec parrot apt install -y xfce4 xfce4-goodies tightvncserver wget curl dbus-x11 sudo
+          docker run -dit --name kali --privileged -p 5901:5901 kalilinux/kali-rolling bash
 
-      - name: Setup VNC
+      - name: Install XFCE + VNC + SSH Client
         run: |
-          docker exec -e USER=root parrot bash -c 'mkdir -p ~/.vnc && echo "123456" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd'
-          docker exec -e USER=root parrot bash -c 'echo "#!/bin/bash" > ~/.vnc/xstartup && echo "startxfce4 &" >> ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup'
-          docker exec -e USER=root parrot vncserver :1
+          docker exec kali apt update
+          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver sudo dbus-x11
+          sudo apt-get install -y openssh-client
 
-      - name: Download and Start Ngrok v3 Binary (working)
+      - name: Setup VNC Desktop
         run: |
-          curl -Lo ngrok https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64 || exit 1
-          chmod +x ngrok
-          ./ngrok config add-authtoken 2stzlWkZievCRtP4Wwp9PhP3J5F_6TnB7h37UqrikBqS3HWqv
-          ./ngrok tcp 5901 > ngrok.log &
+          docker exec -e USER=root kali bash -c 'mkdir -p ~/.vnc && echo "123456" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd'
+          docker exec -e USER=root kali bash -c 'echo "#!/bin/bash" > ~/.vnc/xstartup && echo "startxfce4 &" >> ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup'
+          docker exec -e USER=root kali vncserver :1
+
+      - name: Expose Port with Serveo (SSH)
+        run: |
+          ssh -o StrictHostKeyChecking=no -R 5901:localhost:5901 serveo.net &
           sleep 10
-          grep -o 'tcp://[0-9a-zA-Z\.:]*' ngrok.log || (echo "❌ Ngrok tunnel failed"; exit 1)
+          echo "🛰️  Serveo is exposing your VNC on port 5901."
+          echo "➡️  Connect your VNC viewer to: serveo.net:5901"
+          echo "🔑 Password: 123456"
+          sleep 3500
