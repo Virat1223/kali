@@ -1,4 +1,4 @@
-name: Kali Desktop with VNC (Serveo Tunnel from Inside Container)
+name: Kali Linux Desktop with VNC over Serveo (No CC, Fixed USER Bug)
 
 on:
   workflow_dispatch:
@@ -9,31 +9,32 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Start Kali Container
+      - name: Start Kali Linux Container
         run: |
           docker pull kalilinux/kali-rolling
           docker run -dit --name kali --privileged -p 5901:5901 kalilinux/kali-rolling bash
 
-      - name: Install GUI, VNC & SSH Inside Kali
+      - name: Install XFCE, VNC, SSH in Kali
         run: |
           docker exec kali apt update
-          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver openssh-client dbus-x11 curl
+          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver openssh-client curl dbus-x11
 
-      - name: Setup VNC
+      - name: Setup VNC with Fixed USER
         run: |
           docker exec kali mkdir -p /root/.vnc
           docker exec kali bash -c "echo '123456' | vncpasswd -f > /root/.vnc/passwd"
           docker exec kali chmod 600 /root/.vnc/passwd
           docker exec kali bash -c 'echo "#!/bin/bash\nstartxfce4 &" > /root/.vnc/xstartup'
           docker exec kali chmod +x /root/.vnc/xstartup
-          docker exec kali vncserver :1
+          docker exec -e USER=root kali vncserver :1
 
-      - name: Start Serveo Tunnel Inside Kali
+      - name: Create Serveo Tunnel from Inside Kali
         run: |
           docker exec -d kali bash -c "ssh -o StrictHostKeyChecking=no -R 5901:localhost:5901 serveo.net"
-          sleep 10
-          echo "🌐 VNC is being tunneled through serveo.net:5901"
-          echo "🔑 VNC password: 123456"
+          echo "🌐 Serveo tunnel created."
+          echo "🖥️  Connect VNC Viewer to: serveo.net:5901"
+          echo "🔑 VNC Password: 123456"
+          sleep 20
 
-      - name: Keep Job Alive for Connection
-        run: sleep 3500
+      - name: Keep Job Alive for 58 Minutes
+        run: sleep 3480
