@@ -1,4 +1,4 @@
-name: Kali Linux GUI via VNC + LocalXpose (No CC, No Timeout, WORKING)
+name: Kali Linux GUI with VNC + LocalXpose (WORKING FINAL VERSION)
 
 on:
   workflow_dispatch:
@@ -9,17 +9,17 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Start Kali Container
+      - name: Start Kali Linux container
         run: |
           docker pull kalilinux/kali-rolling
           docker run -dit --name kali --privileged kalilinux/kali-rolling bash
 
-      - name: Install GUI, VNC, and Tools
+      - name: Install XFCE, VNC, unzip, curl in Kali
         run: |
           docker exec kali apt update
           docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver dbus-x11 curl unzip
 
-      - name: Configure VNC Server
+      - name: Configure VNC
         run: |
           docker exec kali mkdir -p /root/.vnc
           docker exec kali bash -c "echo '123456' | vncpasswd -f > /root/.vnc/passwd"
@@ -28,15 +28,15 @@ jobs:
           docker exec kali chmod +x /root/.vnc/xstartup
           docker exec -e USER=root kali vncserver :1
 
-      - name: Download & Start LocalXpose Tunnel (TCP 5901)
+      - name: Download & Launch LocalXpose (v1.4.10)
         run: |
-          curl -L https://localxpose.s3.amazonaws.com/stable/localxpose-linux-amd64 -o localxpose
+          curl -L https://github.com/localxpose/localxpose/releases/download/v1.4.10/localxpose-linux-amd64 -o localxpose
           chmod +x localxpose
           ./localxpose auth DgN6KiykIQ1cb7XvcoaYz2AXX68yIwvUndjYfchQ
           ./localxpose tunnel tcp --port 5901 > lx.log &
           sleep 10
-          echo "🔗 VNC Tunnel Ready:"
+          echo "🔗 VNC Tunnel (paste in RealVNC Viewer):"
           cat lx.log | grep -i 'tcp://'
 
-      - name: Keep Runner Alive
+      - name: Keep GitHub Runner Alive
         run: sleep 3500
