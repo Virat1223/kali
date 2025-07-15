@@ -28,13 +28,15 @@ jobs:
           docker exec kali chmod +x /root/.vnc/xstartup
           docker exec -e USER=root kali vncserver :1
 
-      - name: 🌍 Start noVNC and Tunnel (localhost.run)
-        run: |
-          docker exec -d kali bash -c "/opt/novnc/utils/novnc_proxy --vnc localhost:5901 --listen 6080"
-          ssh -o StrictHostKeyChecking=no -R 80:localhost:6080 nokey@localhost.run > link.txt &
-          sleep 10
-          echo "🔗 Browser Access Link:"
-          cat link.txt | grep -Eo 'https://[0-9a-z]+\.localhost\.run'
+            - name: 🌍 Start noVNC and Tunnel (localhost.run)
+              run: |
+               docker exec -d kali bash -c "/opt/novnc/utils/novnc_proxy --vnc localhost:5901 --listen 6080"
+               nohup ssh -o StrictHostKeyChecking=no -R 80:localhost:6080 nokey@localhost.run > tunnel.log 2>&1 &
+               sleep 10
+               echo "🔗 Checking tunnel output..."
+               cat tunnel.log || true
+               echo "🔗 Your Kali browser GUI might be here:"
+               echo "👉 https://ee4b8f6e-c111-4580-832b-badf136d6ac8.localhost.run"
 
       - name: 🕒 Keep GitHub Runner Alive
         run: sleep 3500
