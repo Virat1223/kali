@@ -1,4 +1,4 @@
-name: Browser-Based Kali Linux GUI (noVNC + Serveo)
+name: Browser-Based Kali Linux GUI (noVNC + Serveo, FINAL FIXED)
 
 on:
   workflow_dispatch:
@@ -9,26 +9,26 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Start Kali Container
+      - name: 🐍 Start Kali Container
         run: |
           docker pull kalilinux/kali-rolling
           docker run -dit --name kali --privileged kalilinux/kali-rolling bash
 
-      - name: Install XFCE, noVNC, websockify
+      - name: ⚙️ Install XFCE, noVNC, websockify with PEP 668 fix
         run: |
           docker exec kali apt update
           docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver wget curl git python3 python3-pip
-          docker exec kali bash -c "pip3 install websockify"
+          docker exec kali bash -c "pip3 install --break-system-packages websockify"
           docker exec kali bash -c "git clone https://github.com/novnc/noVNC /opt/novnc"
           docker exec kali bash -c "git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify"
-          docker exec kali bash -c "mkdir -p /root/.vnc"
+          docker exec kali mkdir -p /root/.vnc
           docker exec kali bash -c "echo '123456' | vncpasswd -f > /root/.vnc/passwd"
-          docker exec kali bash -c "chmod 600 /root/.vnc/passwd"
+          docker exec kali chmod 600 /root/.vnc/passwd
           docker exec kali bash -c "echo '#!/bin/bash\nstartxfce4 &' > /root/.vnc/xstartup"
-          docker exec kali bash -c "chmod +x /root/.vnc/xstartup"
+          docker exec kali chmod +x /root/.vnc/xstartup
           docker exec -e USER=root kali vncserver :1
 
-      - name: Start noVNC and Tunnel (Serveo)
+      - name: 🌍 Start noVNC and Tunnel via Serveo
         run: |
           docker exec -d kali bash -c "/opt/novnc/utils/novnc_proxy --vnc localhost:5901 --listen 6080"
           ssh -o StrictHostKeyChecking=no -R 80:localhost:6080 serveo.net > link.txt &
@@ -36,5 +36,5 @@ jobs:
           echo "🔗 Open your browser to access Kali:"
           cat link.txt | grep -Eo 'https://.*serveo.net'
 
-      - name: Keep it alive
+      - name: 🕒 Keep runner alive
         run: sleep 3500
