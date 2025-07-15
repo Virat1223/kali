@@ -1,4 +1,4 @@
-name: Kali Desktop over VNC (Docker version)
+name: Kali Linux Desktop over VNC (Docker + Ngrok)
 
 on:
   workflow_dispatch:
@@ -9,24 +9,27 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Pull Kali Linux Docker image
+      - name: Pull Kali Docker Image
         run: |
           docker pull kalilinux/kali-rolling
 
-      - name: Start Kali with Desktop + VNC + Ngrok
+      - name: Start Kali Container
         run: |
-          docker run -dit --name kali \
-            --privileged \
-            -p 5901:5901 \
-            kalilinux/kali-rolling bash
+          docker run -dit --name kali --privileged -p 5901:5901 kalilinux/kali-rolling bash
 
+      - name: Install Desktop + VNC inside Kali
+        run: |
           docker exec kali apt update
           docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver wget curl sudo dbus-x11
 
-          docker exec kali bash -c 'echo "123456" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd'
+      - name: Setup VNC Password and Desktop
+        run: |
+          docker exec kali bash -c 'mkdir -p ~/.vnc && echo "123456" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd'
           docker exec kali bash -c 'echo "#!/bin/bash" > ~/.vnc/xstartup && echo "startxfce4 &" >> ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup'
           docker exec kali vncserver :1
 
+      - name: Download and Start Ngrok
+        run: |
           wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
           unzip ngrok-stable-linux-amd64.zip
           chmod +x ngrok
