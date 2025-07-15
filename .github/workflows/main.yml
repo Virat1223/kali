@@ -1,4 +1,4 @@
-name: Kali Linux Desktop over VNC (Serveo Tunnel)
+name: Kali Desktop with VNC (Serveo Tunnel from Inside Container)
 
 on:
   workflow_dispatch:
@@ -9,31 +9,31 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Pull Kali Docker Image
-        run: |
-          docker pull kalilinux/kali-rolling
-
       - name: Start Kali Container
         run: |
+          docker pull kalilinux/kali-rolling
           docker run -dit --name kali --privileged -p 5901:5901 kalilinux/kali-rolling bash
 
-      - name: Install XFCE + VNC + SSH Client
+      - name: Install GUI, VNC & SSH Inside Kali
         run: |
           docker exec kali apt update
-          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver sudo dbus-x11
-          sudo apt-get install -y openssh-client
+          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver openssh-client dbus-x11 curl
 
-      - name: Setup VNC Desktop
+      - name: Setup VNC
         run: |
-          docker exec -e USER=root kali bash -c 'mkdir -p ~/.vnc && echo "123456" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd'
-          docker exec -e USER=root kali bash -c 'echo "#!/bin/bash" > ~/.vnc/xstartup && echo "startxfce4 &" >> ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup'
-          docker exec -e USER=root kali vncserver :1
+          docker exec kali mkdir -p /root/.vnc
+          docker exec kali bash -c "echo '123456' | vncpasswd -f > /root/.vnc/passwd"
+          docker exec kali chmod 600 /root/.vnc/passwd
+          docker exec kali bash -c 'echo "#!/bin/bash\nstartxfce4 &" > /root/.vnc/xstartup'
+          docker exec kali chmod +x /root/.vnc/xstartup
+          docker exec kali vncserver :1
 
-      - name: Expose Port with Serveo (SSH)
+      - name: Start Serveo Tunnel Inside Kali
         run: |
-          ssh -o StrictHostKeyChecking=no -R 5901:localhost:5901 serveo.net &
+          docker exec -d kali bash -c "ssh -o StrictHostKeyChecking=no -R 5901:localhost:5901 serveo.net"
           sleep 10
-          echo "🛰️  Serveo is exposing your VNC on port 5901."
-          echo "➡️  Connect your VNC viewer to: serveo.net:5901"
-          echo "🔑 Password: 123456"
-          sleep 3500
+          echo "🌐 VNC is being tunneled through serveo.net:5901"
+          echo "🔑 VNC password: 123456"
+
+      - name: Keep Job Alive for Connection
+        run: sleep 3500
