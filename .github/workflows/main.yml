@@ -1,7 +1,5 @@
-name: Browser-Based Kali GUI (noVNC + Localhost.run)
-
-on:
-  workflow_dispatch:
+name: Browser-Based Kali GUI (noVNC + localhost.run)
+on: workflow_dispatch
 
 jobs:
   kali-browser:
@@ -14,11 +12,11 @@ jobs:
           docker pull kalilinux/kali-rolling
           docker run -dit --name kali --privileged kalilinux/kali-rolling bash
 
-      - name: ⚙️ Install XFCE, noVNC, websockify (with pip fix)
+      - name: ⚙️ Install XFCE, noVNC, websockify
         run: |
           docker exec kali apt update
           docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver curl git python3 python3-pip openssh-client
-          docker exec kali bash -c "pip3 install --break-system-packages websockify"
+          docker exec kali pip3 install --break-system-packages websockify
           docker exec kali git clone https://github.com/novnc/noVNC /opt/novnc
           docker exec kali git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify
           docker exec kali mkdir -p /root/.vnc
@@ -26,17 +24,32 @@ jobs:
           docker exec kali chmod 600 /root/.vnc/passwd
           docker exec kali bash -c "echo '#!/bin/bash\nstartxfce4 &' > /root/.vnc/xstartup"
           docker exec kali chmod +x /root/.vnc/xstartup
-          docker exec -e USER=root kali vncserver :1
+          docker exec kali vncserver :1
 
-      - name: 🌍 Start noVNC and Tunnel (localhost.run)
+      - name: 🌍 Start noVNC & localhost.run Tunnel
         run: |
-          docker exec -d kali bash -c "/opt/novnc/utils/novnc_proxy --vnc localhost:5901 --listen 6080"
-          nohup ssh -o StrictHostKeyChecking=no -R 80:localhost:6080 nokey@localhost.run > tunnel.log 2>&1 &
-          sleep 10
-          echo "🔗 Checking tunnel output..."
-          cat tunnel.log || true
-          echo "🔗 Your Kali browser GUI might be here:"
-          echo "👉 https://$(grep -oE '[a-z0-9\-]{36}\.localhost\.run' tunnel.log | head -n1)"
+          # Start noVNC proxy
+          docker exec -d kali bash -c "/opt/novnc/utils/novnc_proxy \
+            --vnc 127.0.0.1:5901 --listen 6080 --web /opt/novnc"
 
-      - name: 🕒 Keep GitHub Runner Alive
+          sleep 5
+          echo "🔎 Verifying services inside Kali:"
+          docker exec kali lsof -i :6080 || echo "❌ noVNC not listening"
+          docker exec kali lsof -i :5901 || echo "❌ VNC not listening"
+          docker exec kali ps aux | grep novnc || echo "❌ noVNC process not found"
+
+          # Start SSH tunnel
+          nohup ssh -o StrictHostKeyChecking=no \
+            -R 80:localhost:6080 nokey@localhost.run \
+            > tunnel.log 2>&1 &
+          sleep 10
+
+          echo "🔗 Tunnel log:"
+          cat tunnel.log || true
+
+          echo "👉 GUI URL:"
+          grep -oE '[a-z0-9\-]{36}\.localhost\.run' tunnel.log \
+            | head -n1 || echo "❌ Could not extract tunnel URL"
+
+      - name: 🕒 Keep Runner Alive
         run: sleep 3500
