@@ -1,4 +1,4 @@
-name: Kali Linux Desktop over VNC (Docker + Ngrok)
+name: Kali Linux Desktop over VNC (Docker + Ngrok v3)
 
 on:
   workflow_dispatch:
@@ -28,16 +28,12 @@ jobs:
           docker exec -e USER=root kali bash -c 'echo "#!/bin/bash" > ~/.vnc/xstartup && echo "startxfce4 &" >> ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup'
           docker exec -e USER=root kali vncserver :1
 
-      - name: Download and Start Ngrok Tunnel
+      - name: Download and Start Ngrok v3
         run: |
-          wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
-          unzip ngrok-stable-linux-amd64.zip
+          wget https://bin.ngrok.com/linux/ngrok-stable.tgz
+          tar -xvzf ngrok-stable.tgz
           chmod +x ngrok
-          ./ngrok authtoken 2stzlWkZievCRtP4Wwp9PhP3J5F_6TnB7h37UqrikBqS3HWqv
-          ./ngrok tcp 5901 &
+          ./ngrok config add-authtoken 2stzlWkZievCRtP4Wwp9PhP3J5F_6TnB7h37UqrikBqS3HWqv
+          ./ngrok tcp 5901 > ngrok.log &
           sleep 10
-
-      - name: Show VNC Tunnel Link
-        run: |
-          echo "🔗 VNC Tunnel (connect this in VNC Viewer):"
-          curl -s localhost:4040/api/tunnels | grep -o 'tcp://[0-9a-zA-Z\.:]*'
+          grep -o 'tcp://[0-9a-zA-Z\.:]*' ngrok.log || (echo "❌ Ngrok tunnel failed"; exit 1)
