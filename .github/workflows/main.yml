@@ -1,55 +1,30 @@
-name: Browser-Based Kali GUI (noVNC + localhost.run)
-on: workflow_dispatch
+name: Browser-Based Kali (XFCE + noVNC)
+
+on:
+  workflow_dispatch:
 
 jobs:
-  kali-browser:
+  kali-novnc:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
-      - name: 🐍 Start Kali Container
+      - name: 🐳 Pull and Run Kali XFCE + noVNC Container
         run: |
-          docker pull kalilinux/kali-rolling
-          docker run -dit --name kali --privileged kalilinux/kali-rolling bash
-
-      - name: ⚙️ Install XFCE, noVNC, websockify
-        run: |
-          docker exec kali apt update
-          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver curl git python3 python3-pip openssh-client
-          docker exec kali pip3 install --break-system-packages websockify
-          docker exec kali git clone https://github.com/novnc/noVNC /opt/novnc
-          docker exec kali git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify
-          docker exec kali mkdir -p /root/.vnc
-          docker exec kali bash -c "echo '123456' | vncpasswd -f > /root/.vnc/passwd"
-          docker exec kali chmod 600 /root/.vnc/passwd
-          docker exec kali bash -c "echo '#!/bin/bash\nstartxfce4 &' > /root/.vnc/xstartup"
-          docker exec kali chmod +x /root/.vnc/xstartup
-          docker exec kali vncserver :1
-
-      - name: 🌍 Start noVNC & localhost.run Tunnel
-        run: |
-          # Start noVNC proxy
-          docker exec -d kali bash -c "/opt/novnc/utils/novnc_proxy \
-            --vnc 127.0.0.1:5901 --listen 6080 --web /opt/novnc"
-
+          docker pull steinruck/kali-xfce-novnc
+          docker run -d --name kali-gui \
+            -p 6080:8080 -e VNC_PW=123456 steinruck/kali-xfce-novnc
           sleep 5
-          echo "🔎 Verifying services inside Kali:"
-          docker exec kali lsof -i :6080 || echo "❌ noVNC not listening"
-          docker exec kali lsof -i :5901 || echo "❌ VNC not listening"
-          docker exec kali ps aux | grep novnc || echo "❌ noVNC process not found"
 
-          # Start SSH tunnel
+      - name: 🌍 Create public tunnel with localhost.run
+        run: |
           nohup ssh -o StrictHostKeyChecking=no \
-            -R 80:localhost:6080 nokey@localhost.run \
-            > tunnel.log 2>&1 &
+            -R 80:localhost:6080 nokey@localhost.run > tunnel.log 2>&1 &
           sleep 10
-
-          echo "🔗 Tunnel log:"
+          echo "🔍 Tunnel Log:"
           cat tunnel.log || true
-
-          echo "👉 GUI URL:"
-          grep -oE '[a-z0-9\-]{36}\.localhost\.run' tunnel.log \
-            | head -n1 || echo "❌ Could not extract tunnel URL"
+          echo "🌐 GUI might be available at:"
+          grep -oE '[a-z0-9\-]{36}\.localhost\.run' tunnel.log | head -n1 || echo "❌ Tunnel not created"
 
       - name: 🕒 Keep Runner Alive
         run: sleep 3500
