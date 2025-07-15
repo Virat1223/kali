@@ -1,42 +1,40 @@
-name: Kali Linux GUI with VNC + LocalXpose (WORKING FINAL VERSION)
+name: Browser-Based Kali Linux GUI (noVNC + Serveo)
 
 on:
   workflow_dispatch:
 
 jobs:
-  kali:
+  kali-browser:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
-      - name: Start Kali Linux container
+      - name: Start Kali Container
         run: |
           docker pull kalilinux/kali-rolling
           docker run -dit --name kali --privileged kalilinux/kali-rolling bash
 
-      - name: Install XFCE, VNC, unzip, curl in Kali
+      - name: Install XFCE, noVNC, websockify
         run: |
           docker exec kali apt update
-          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver dbus-x11 curl unzip
-
-      - name: Configure VNC
-        run: |
-          docker exec kali mkdir -p /root/.vnc
+          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver wget curl git python3 python3-pip
+          docker exec kali bash -c "pip3 install websockify"
+          docker exec kali bash -c "git clone https://github.com/novnc/noVNC /opt/novnc"
+          docker exec kali bash -c "git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify"
+          docker exec kali bash -c "mkdir -p /root/.vnc"
           docker exec kali bash -c "echo '123456' | vncpasswd -f > /root/.vnc/passwd"
-          docker exec kali chmod 600 /root/.vnc/passwd
-          docker exec kali bash -c 'echo "#!/bin/bash\nstartxfce4 &" > /root/.vnc/xstartup'
-          docker exec kali chmod +x /root/.vnc/xstartup
+          docker exec kali bash -c "chmod 600 /root/.vnc/passwd"
+          docker exec kali bash -c "echo '#!/bin/bash\nstartxfce4 &' > /root/.vnc/xstartup"
+          docker exec kali bash -c "chmod +x /root/.vnc/xstartup"
           docker exec -e USER=root kali vncserver :1
 
-      - name: Download & Launch LocalXpose (v1.4.10)
+      - name: Start noVNC and Tunnel (Serveo)
         run: |
-          curl -L https://github.com/localxpose/localxpose/releases/download/v1.4.10/localxpose-linux-amd64 -o localxpose
-          chmod +x localxpose
-          ./localxpose auth DgN6KiykIQ1cb7XvcoaYz2AXX68yIwvUndjYfchQ
-          ./localxpose tunnel tcp --port 5901 > lx.log &
+          docker exec -d kali bash -c "/opt/novnc/utils/novnc_proxy --vnc localhost:5901 --listen 6080"
+          ssh -o StrictHostKeyChecking=no -R 80:localhost:6080 serveo.net > link.txt &
           sleep 10
-          echo "🔗 VNC Tunnel (paste in RealVNC Viewer):"
-          cat lx.log | grep -i 'tcp://'
+          echo "🔗 Open your browser to access Kali:"
+          cat link.txt | grep -Eo 'https://.*serveo.net'
 
-      - name: Keep GitHub Runner Alive
+      - name: Keep it alive
         run: sleep 3500
