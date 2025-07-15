@@ -1,36 +1,33 @@
-name: Kali Linux Desktop over VNC (Ngrok v3 Raw Binary)
+name: Parrot Desktop with VNC and Ngrok v3
 
 on:
   workflow_dispatch:
 
 jobs:
-  kali:
+  parrot:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
-      - name: Pull Kali Docker Image
+      - name: Start Parrot OS Container
         run: |
-          docker pull kalilinux/kali-rolling
+          docker pull parrotsec/core:latest
+          docker run -dit --name parrot --privileged -p 5901:5901 parrotsec/core:latest bash
 
-      - name: Start Kali Container
+      - name: Install XFCE + VNC in Parrot
         run: |
-          docker run -dit --name kali --privileged -p 5901:5901 kalilinux/kali-rolling bash
+          docker exec parrot apt update
+          docker exec parrot apt install -y xfce4 xfce4-goodies tightvncserver wget curl dbus-x11 sudo
 
-      - name: Install XFCE Desktop + VNC inside Kali
+      - name: Setup VNC
         run: |
-          docker exec kali apt update
-          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver wget curl sudo dbus-x11
+          docker exec -e USER=root parrot bash -c 'mkdir -p ~/.vnc && echo "123456" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd'
+          docker exec -e USER=root parrot bash -c 'echo "#!/bin/bash" > ~/.vnc/xstartup && echo "startxfce4 &" >> ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup'
+          docker exec -e USER=root parrot vncserver :1
 
-      - name: Setup VNC Password and Desktop
+      - name: Download and Start Ngrok v3 Binary (working)
         run: |
-          docker exec -e USER=root kali bash -c 'mkdir -p ~/.vnc && echo "123456" | vncpasswd -f > ~/.vnc/passwd && chmod 600 ~/.vnc/passwd'
-          docker exec -e USER=root kali bash -c 'echo "#!/bin/bash" > ~/.vnc/xstartup && echo "startxfce4 &" >> ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup'
-          docker exec -e USER=root kali vncserver :1
-
-      - name: Download and Start Ngrok (no unzip needed)
-        run: |
-          curl -Lo ngrok https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64
+          curl -Lo ngrok https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64 || exit 1
           chmod +x ngrok
           ./ngrok config add-authtoken 2stzlWkZievCRtP4Wwp9PhP3J5F_6TnB7h37UqrikBqS3HWqv
           ./ngrok tcp 5901 > ngrok.log &
