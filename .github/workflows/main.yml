@@ -1,4 +1,4 @@
-name: Kali Linux Desktop with VNC over Serveo (No CC, Fixed USER Bug)
+name: Kali Linux GUI via VNC + LocalXpose (no timeout, no CC)
 
 on:
   workflow_dispatch:
@@ -9,17 +9,17 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Start Kali Linux Container
+      - name: Start Kali Container
         run: |
           docker pull kalilinux/kali-rolling
-          docker run -dit --name kali --privileged -p 5901:5901 kalilinux/kali-rolling bash
+          docker run -dit --name kali --privileged kalilinux/kali-rolling bash
 
-      - name: Install XFCE, VNC, SSH in Kali
+      - name: Install GUI, VNC, LocalXpose in Kali
         run: |
           docker exec kali apt update
           docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver openssh-client curl dbus-x11
 
-      - name: Setup VNC with Fixed USER
+      - name: Setup VNC Server
         run: |
           docker exec kali mkdir -p /root/.vnc
           docker exec kali bash -c "echo '123456' | vncpasswd -f > /root/.vnc/passwd"
@@ -28,13 +28,15 @@ jobs:
           docker exec kali chmod +x /root/.vnc/xstartup
           docker exec -e USER=root kali vncserver :1
 
-      - name: Create Serveo Tunnel from Inside Kali
+      - name: Install & Start LocalXpose Tunnel (TCP:5901)
         run: |
-          docker exec -d kali bash -c "ssh -o StrictHostKeyChecking=no -R 5901:localhost:5901 serveo.net"
-          echo "🌐 Serveo tunnel created."
-          echo "🖥️  Connect VNC Viewer to: serveo.net:5901"
-          echo "🔑 VNC Password: 123456"
-          sleep 20
+          curl -s https://api.localxpose.io/client/download/latest/linux-amd64 -o lx
+          chmod +x lx
+          ./lx auth <YOUR_LOCALXPOSE_TOKEN_HERE>
+          ./lx tunnel tcp --port 5901 > lx.log &
+          sleep 10
+          echo "🔗 LocalXpose Tunnel URL:"
+          cat lx.log | grep -i 'tcp://'
 
-      - name: Keep Job Alive for 58 Minutes
-        run: sleep 3480
+      - name: Keep Runner Alive
+        run: sleep 3500
