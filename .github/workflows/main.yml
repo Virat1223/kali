@@ -30,14 +30,10 @@ jobs:
 
       - name: Download & Start LocalXpose Tunnel (TCP 5901)
         run: |
-          curl -L https://github.com/localxpose/localxpose/releases/latest/download/localxpose-linux-amd64 -o localxpose
+          curl -L https://localxpose.s3.amazonaws.com/stable/localxpose-linux-amd64 -o localxpose
           chmod +x localxpose
-
           ./localxpose auth DgN6KiykIQ1cb7XvcoaYz2AXX68yIwvUndjYfchQ
           ./localxpose tunnel tcp --port 5901 > lx.log &
           sleep 10
           echo "🔗 VNC Tunnel Ready:"
           cat lx.log | grep -i 'tcp://'
-
-      - name: Keep Alive
-        run: sleep 3500
