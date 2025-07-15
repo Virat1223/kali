@@ -1,4 +1,4 @@
-name: Browser-Based Kali (XFCE + noVNC)
+name: Kali GUI in Browser (XFCE + noVNC)
 
 on:
   workflow_dispatch:
@@ -9,22 +9,26 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: 🐳 Pull and Run Kali XFCE + noVNC Container
+      - name: 🐳 Pull and Run Kali Docker Container
         run: |
-          docker pull steinruck/kali-xfce-novnc
+          docker pull iphoneintosh/kali-docker:latest
           docker run -d --name kali-gui \
-            -p 6080:8080 -e VNC_PW=123456 steinruck/kali-xfce-novnc
-          sleep 5
+            -p 6080:8080 -p 5900:5900 \
+            -e VNCEXPOSE=0 \
+            -e VNCPWD=changeme \
+            iphoneintosh/kali-docker:latest
+          sleep 8
 
-      - name: 🌍 Create public tunnel with localhost.run
+      - name: 🌍 Create SSH Tunnel via localhost.run
         run: |
           nohup ssh -o StrictHostKeyChecking=no \
-            -R 80:localhost:6080 nokey@localhost.run > tunnel.log 2>&1 &
+            -R 80:localhost:6080 nokey@localhost.run \
+            > tunnel.log 2>&1 &
           sleep 10
           echo "🔍 Tunnel Log:"
           cat tunnel.log || true
-          echo "🌐 GUI might be available at:"
-          grep -oE '[a-z0-9\-]{36}\.localhost\.run' tunnel.log | head -n1 || echo "❌ Tunnel not created"
+          echo "🌐 Access URL:"
+          grep -oE '[a-z0-9\-]{36}\.localhost\.run' tunnel.log | head -n1
 
       - name: 🕒 Keep Runner Alive
         run: sleep 3500
