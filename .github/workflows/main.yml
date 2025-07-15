@@ -1,4 +1,4 @@
-name: Kali Desktop in GitHub
+name: Kali Desktop over VNC
 
 on:
   workflow_dispatch:
@@ -9,14 +9,24 @@ jobs:
     timeout-minutes: 360
 
     steps:
-    - name: Set up Kali repo & update
+    - name: Clean system and prep
       run: |
-        sudo apt update
-        sudo apt install -y curl gnupg lsb-release
+        sudo rm -rf /var/lib/dpkg/lock
+        sudo rm -rf /var/lib/apt/lists/lock
+        sudo rm -rf /var/cache/apt/archives/lock
+        sudo dpkg --configure -a
+        sudo apt clean
+        sudo apt update --fix-missing
+
+    - name: Add Kali repo & key
+      run: |
         echo "deb http://http.kali.org/kali kali-rolling main contrib non-free" | sudo tee /etc/apt/sources.list.d/kali.list
         curl -fsSL https://archive.kali.org/archive-key.asc | sudo apt-key add -
         sudo apt update
-        sudo apt install -y kali-linux-core xfce4 xfce4-goodies tightvncserver dbus-x11
+
+    - name: Install Kali Desktop and VNC server
+      run: |
+        sudo DEBIAN_FRONTEND=noninteractive apt install -y kali-linux-core xfce4 xfce4-goodies tightvncserver dbus-x11
 
     - name: Set up VNC server
       run: |
@@ -28,7 +38,7 @@ jobs:
         chmod +x ~/.vnc/xstartup
         vncserver :1
 
-    - name: Install ngrok & expose VNC
+    - name: Download ngrok and start tunnel
       run: |
         wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
         unzip ngrok-stable-linux-amd64.zip
@@ -37,4 +47,3 @@ jobs:
         ./ngrok tcp 5901 &
         sleep 10
         curl -s localhost:4040/api/tunnels | grep -o 'tcp://[0-9a-zA-Z\.:]*'
-
