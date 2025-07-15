@@ -1,4 +1,4 @@
-name: Kali Linux GUI via VNC + LocalXpose (No Timeouts, No CC)
+name: Kali Linux GUI via VNC + LocalXpose (No CC, No Timeout, WORKING)
 
 on:
   workflow_dispatch:
@@ -14,10 +14,10 @@ jobs:
           docker pull kalilinux/kali-rolling
           docker run -dit --name kali --privileged kalilinux/kali-rolling bash
 
-      - name: Install GUI, VNC, and unzip in Kali
+      - name: Install GUI, VNC, and Tools
         run: |
           docker exec kali apt update
-          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver dbus-x11 unzip curl
+          docker exec kali apt install -y xfce4 xfce4-goodies tightvncserver dbus-x11 curl unzip
 
       - name: Configure VNC Server
         run: |
@@ -37,3 +37,6 @@ jobs:
           sleep 10
           echo "🔗 VNC Tunnel Ready:"
           cat lx.log | grep -i 'tcp://'
+
+      - name: Keep Runner Alive
+        run: sleep 3500
