@@ -32,7 +32,7 @@ jobs:
         run: |
           curl -s https://api.localxpose.io/client/download/latest/linux-amd64 -o lx
           chmod +x lx
-          ./lx auth <YOUR_LOCALXPOSE_TOKEN_HERE>
+          ./lx auth DgN6KiykIQ1cb7XvcoaYz2AXX68yIwvUndjYfchQ
           ./lx tunnel tcp --port 5901 > lx.log &
           sleep 10
           echo "🔗 LocalXpose Tunnel URL:"
